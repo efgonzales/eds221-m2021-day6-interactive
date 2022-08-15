@@ -155,3 +155,85 @@ ex_19 <- wb_clean |>
   filter(country %in% c("China", "Australia", "Canada"))
 ```
 
+###rename
+```{r}
+ex_20 <- wb_clean |> 
+  rename(ffcp = fossil_fuel_cons_pct,
+         ws = water_stress)
+
+ex_21 <- ex_20 |> #new name = old name
+  rename(access_clean = access_clean_fuels_pp,
+         access_elec = access_electricity_pp)
+```
+
+###mutate: update existing col/add new col
+
+If you assign a NEW col name, it will add a new col to the end of your data frame. If you assign an existing col name, it will overwrite that col.
+```{r}
+ex_22 <- wb_clean |> #add new col & relocate
+  mutate(co2_emissions_t = co2_emissions_kt * 1000) |> 
+  relocate(co2_emissions_t, .after = co2_emissions_kt)
+
+ex_23 <- wb_clean |> 
+  mutate(yay = "YAY")
+
+ex_24 <- wb_clean |> 
+  mutate(year = as.character(year))
+
+ex_25 <- ex_24 |> 
+  mutate(year = as.numeric(year))
+
+# dplyr::relocate()
+ex_26 <- wb_clean |> 
+  relocate(country, .after = year)
+```
+
+### `group_by() |> summarize()`
+```{r}
+#group_by(): creates 
+#summarize(): apply your funcs to EACH GROUP, and return them in a summary table
+ex_27 <- starwars |> 
+  filter(homeworld %in% c("Naboo", "Tabooine")) |> 
+  group_by(species, homeworld) |> 
+  summarize(mean_height = mean(height, na.rm = TRUE),
+            mean_mass = mean(mass, na.rm = TRUE))
+```
+
+##Frequency/Case table
+```{r}
+df <- tribble(
+  ~species, ~length, ~number,
+  "lobster", 12, 4,
+  "lobster", 14, 6,
+  "lobster", 15, 2
+)
+
+df_case <- df |> 
+  uncount(number)
+
+#opposite 
+df_count <- df_case |> 
+  dplyr::count(length)
+#example -- count does --> group_by(), summarize(), n()
+sw_count <- starwars |> 
+  count(homeworld, species)
+```
+
+##Practice example
+Start from wb_clean. 
+- Only keep obs for Nicaragua, Ecuador, Peru, & Chile. 
+- For years > 2005. 
+- Keep columns for country, year, & co2 emissions. 
+- Add a new col that is co2_emissions converted to megatons.
+- Find the total co2 emissions in megatons for years still in the dataset by country, using group by/summarize.
+```{r}
+wb_practice <- wb_clean |> 
+  filter(country %in% c("Nicaragua", "Ecuador", "Peru", "Chile"), year > 2005) |>
+  select(country, year, co2_emissions_kt) |> 
+  mutate(co2_emissions_mt = co2_emissions_kt * 0.001) 
+wb_prac_cont <- wb_practice |> 
+  group_by(country) |> 
+  summarize(tot_co2_emissions_mt = mean(co2_emissions_mt, na.rm = TRUE))
+  
+```
+
