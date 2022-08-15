@@ -1,0 +1,157 @@
+---
+title: "Wrangling - tidyr"
+author: "Elise Gonzales"
+date: "2022-08-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+
+library(tidyverse)
+library(here)
+library(janitor)
+```
+
+## Read in WB data files.
+```{r}
+wb_indicators <- read_csv(here("data", "wb_indicators.csv"), na = c("..", "")) #converts .. to true "NA"
+wb_metadata <- read_csv(here("data", "wb_indicators_metadata.csv"))
+```
+
+##Data wrangling
+###pivot_longer() to combine years
+```{r}
+wb_indicators_long <- wb_indicators |> 
+  pivot_longer(cols = `2001 [YR2001]`:`2020 [YR2020]`,
+               names_to = "year",
+               values_to = "indicator_value")
+
+class(wb_indicators_long$year)
+```
+
+###separate() to clean up year column & exclude some cols
+```{r}
+#check output after every step!
+class(wb_clean$year)
+#year still a character. Pipe above and use as.numeric()
+
+wb_clean <- wb_indicators_long |> 
+  separate(col = year,
+           into = c("year", "year_chr"),
+           sep = " ") |> 
+  select(-year_chr, -`Country Code`, -`Series Code`) |> #use to exclude some cols 
+  mutate(year = as.numeric(year)) |> 
+  drop_na(`Series Name`) |> 
+  pivot_wider(names_from = `Series Name`, values_from = indicator_value)
+
+names(wb_clean) <- c("country", "year", "access_clean_fuels_pp", "access_electricity_pp", "co2_emissions_kt", "fossil_fuel_cons_pct", "water_stress")
+  
+wb_subset <- wb_clean |> 
+  filter(country %in% c("Algeria", "Botswana", "China", "United States"))
+
+unique(wb_subset$country)
+```
+
+###ggplot
+```{r}
+ggplot(data = wb_subset, aes(x = year, y = co2_emissions_kt)) + geom_line(aes(color = country))  + facet_wrap(~country)
+```
+
+##Filtering rows
+Example 1: filter to only keep exact matches
+```{r}
+ex_1 <- starwars |> 
+  filter(height > 180)
+```
+
+```{r}
+ex_2 <- starwars |> 
+  filter(eye_color == "blue")
+#run unique() in console to check if this filter worked
+```
+
+```{r}
+ex_3 <- starwars |> 
+  filter(homeworld == "Naboo")
+```
+
+```{r}
+ex_4 <- starwars |> 
+  filter(height > 180 & homeworld == "Tatooine")
+```
+
+```{r}
+ex_5 <- starwars |> 
+  filter(hair_color == "brown" & species == "Human")
+```
+
+###filtering OR statements
+```{r}
+ex_6 <- starwars |> 
+  filter(height > 180 | eye_color == "yellow")
+```
+
+```{r}
+ex_7 <- starwars |> 
+  filter(homeworld == "Endor" | species == "Droid")
+```
+
+```{r}
+ex_8 <- starwars |> 
+  filter(eye_color == "blue" | eye_color == "brown" | eye_color == "red")
+#better way to do this below:
+ex_9 <- starwars |> 
+  filter(eye_color %in% c("blue", "brown", "red")) # Does the value in this row match blue or brown or red. Then goes to next line and asks the same question. "==" would apply question: does row one match blue, does row 2 match brown, does row 3 match red. and it'll keep recycling. instead of asking for each color for EACH row.
+#NEVER DO THIS
+ex_10 <- starwars |> 
+  filter(eye_color == c("blue", "brown", "red")) # "==" is to look for SINGLE, EXACT MATCH
+```
+
+```{r}
+ex_11 <- starwars |> 
+  filter(homeworld %in% c("Endor", "Tatooine", "Naboo"), height < 150) #can use "," or "and"
+```
+
+###Negate filter
+```{r}
+ex_12 <- starwars |> 
+  filter(species != "Human")
+
+ex_13 <- starwars |> 
+  filter(!species %in% c("Human", "Ewok", "Wookiee"))
+```
+
+##Select/exclude cols
+```{r}
+#Select by name
+ex_14 <- wb_clean |> 
+  select(country, year, co2_emissions_kt)
+ex_15 <- wb_clean |> 
+  select(year:fossil_fuel_cons_pct)
+
+#exclude one col
+ex_16 <- wb_clean |> 
+  select(year:fossil_fuel_cons_pct, -access_electricity_pp)
+```
+
+```{r}
+#pipe through mult sequences. Check along the way!
+ex_17 <- wb_clean |> 
+  filter(country %in% c("Bolivia", "Chile", "Mexico")) |> 
+  select(country:fossil_fuel_cons_pct)
+```
+
+```{r}
+ex_18 <- wb_clean |> 
+  select(year_new = year,
+         emissions = co2_emissions_kt,
+         country_name = country)
+```
+
+```{r}
+ex_19 <- wb_clean |> 
+  select(country, year, water_stress) |> 
+  filter(country %in% c("China", "Australia", "Canada"))
+```
+
